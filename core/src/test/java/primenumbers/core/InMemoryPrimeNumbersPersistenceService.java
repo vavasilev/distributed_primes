@@ -26,6 +26,6 @@ public class InMemoryPrimeNumbersPersistenceService {
     }
     
     public List<Long> getPrimeNumbers() {
-        return new ArrayList(primeNumbers);
+        return new ArrayList<Long>(primeNumbers);
     }
 }
