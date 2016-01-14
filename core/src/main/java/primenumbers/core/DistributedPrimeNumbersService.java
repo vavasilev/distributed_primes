@@ -2,6 +2,7 @@ package primenumbers.core;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -20,9 +21,17 @@ public class DistributedPrimeNumbersService implements NotificationChannel {
     private PrimeNumberCheckerFactory primeNumberCheckerFactory;
     private CheckerSelectionStrategy checkerSelectionStrategy;
     
+    private CountDownLatch terminationLatch;
+    
     private int poolSize = 10;
     private int queueSize = 50;
     private int checkersSize = 10;
+    
+    private long consumptionTimeout=10;
+    private TimeUnit consumptionTimeUnit = TimeUnit.SECONDS;
+    private int consumptionAttempts = 3;
+    private long generationDelay = 100;
+    private long delayAfterRejection = 1000;
 
 	public int getPoolSize() {
 		return poolSize;
@@ -48,12 +57,52 @@ public class DistributedPrimeNumbersService implements NotificationChannel {
 		this.checkersSize = checkersSize;
 	}
 
+	public long getConsumptionTimeout() {
+		return consumptionTimeout;
+	}
+
+	public void setConsumptionTimeout(long consumptionTimeout) {
+		this.consumptionTimeout = consumptionTimeout;
+	}
+
+	public TimeUnit getConsumptionTimeUnit() {
+		return consumptionTimeUnit;
+	}
+
+	public void setConsumptionTimeUnit(TimeUnit consumptionTimeUnit) {
+		this.consumptionTimeUnit = consumptionTimeUnit;
+	}
+
+	public int getConsumptionAttempts() {
+		return consumptionAttempts;
+	}
+
+	public void setConsumptionAttempts(int consumptionAttempts) {
+		this.consumptionAttempts = consumptionAttempts;
+	}
+
+	public long getGenerationDelay() {
+		return generationDelay;
+	}
+
+	public void setGenerationDelay(long generationDelay) {
+		this.generationDelay = generationDelay;
+	}
+
 	public PrimeNumberCheckerFactory getPrimeNumberCheckerFactory() {
 		return primeNumberCheckerFactory;
 	}
 
 	public void setPrimeNumberCheckerFactory(PrimeNumberCheckerFactory primeNumberCheckerFactory) {
 		this.primeNumberCheckerFactory = primeNumberCheckerFactory;
+	}
+
+	public long getDelayAfterRejection() {
+		return delayAfterRejection;
+	}
+
+	public void setDelayAfterRejection(long delayAfterRejection) {
+		this.delayAfterRejection = delayAfterRejection;
 	}
 
 	public CheckerSelectionStrategy getCheckerSelectionStrategy() {
@@ -71,9 +120,16 @@ public class DistributedPrimeNumbersService implements NotificationChannel {
 		primeNumberCheckersPool = new PrimeNumberCheckersPool(checkersSize, primeNumberCheckerFactory, checkerSelectionStrategy);
 		primeNumberCheckersPool.init();
 		numbersConsumer = new NumbersConsumer(tasksQueue, numberResultListeners, primeCheckExecutor, primeNumberCheckersPool, this);
+		numbersConsumer.setAttempts(consumptionAttempts);
+		numbersConsumer.setTimeout(consumptionTimeout);
+		numbersConsumer.setTimeUnit(consumptionTimeUnit);
+		numbersConsumer.setDelayAfterRejection(delayAfterRejection);
 		numbersGenerator = new NumbersGenerator(tasksQueue, primeCheckExecutor, primeNumberCheckersPool, this);
-		numbersConsumer.start();
-		numbersGenerator.start(lastNumber);
+		numbersGenerator.setGenerationDelay(generationDelay);
+		numbersGenerator.setDelayAfterRejection(delayAfterRejection);
+		terminationLatch = new CountDownLatch(2);
+		numbersConsumer.start(terminationLatch);
+		numbersGenerator.start(lastNumber, terminationLatch);
 	}
 	
 	public void stop() {
@@ -83,19 +139,22 @@ public class DistributedPrimeNumbersService implements NotificationChannel {
 	}
 	
 	public void hardStop() {
-		numbersGenerator.hardStop();
-		numbersConsumer.hardStop();
+		numbersGenerator.stop();
+		numbersConsumer.stop();
 		primeCheckExecutor.shutdownNow();
 	}
 	
 	public void awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+		terminationLatch.await(timeout, unit);
 		primeCheckExecutor.awaitTermination(timeout, unit);
 	}
 	
 	@Override
-	public void notifyError(Exception exception) {
+	public void notifyError(Exception exception, boolean exit) {
 		System.err.println(exception);
-		hardStop();
+		if(exit) {
+			hardStop();
+		}
 	}
 
 	public void addNumberResultListener(NumberResultListener numberResultListener) {

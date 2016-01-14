@@ -8,37 +8,25 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 
-public class NumbersConsumer implements Runnable {
-
-    private PriorityBlockingQueue<FutureAndNumber> tasksQueue;
-    private AtomicBoolean isRunning = new AtomicBoolean();
+public class NumbersConsumer extends NumbersProducerConsumer {
     private List<NumberResultListener> numberResultListeners;
-    private ExecutorService primeCheckExecutor;
-    private PrimeNumberCheckersPool primeNumberCheckersPool;
-    private NotificationChannel notificationChannel;
     
     private long timeout=10;
     private TimeUnit timeUnit = TimeUnit.SECONDS;
     private int attempts = 3;
-    
-    private Thread executorThread;
     
     public NumbersConsumer(PriorityBlockingQueue<FutureAndNumber> tasksQueue,
     		List<NumberResultListener> numberResultListeners,
     		ExecutorService primeCheckExecutor,
             PrimeNumberCheckersPool primeNumberCheckersPool,
             NotificationChannel notificationChannel) {
-        this.tasksQueue = tasksQueue;
+        super(tasksQueue, primeCheckExecutor, primeNumberCheckersPool, notificationChannel);
         this.numberResultListeners = numberResultListeners;
-        this.primeCheckExecutor = primeCheckExecutor;
-        this.primeNumberCheckersPool = primeNumberCheckersPool;
-        this.notificationChannel = notificationChannel;
     }
-    
-    public long getTimeout() {
+
+	public long getTimeout() {
 		return timeout;
 	}
 
@@ -62,23 +50,9 @@ public class NumbersConsumer implements Runnable {
 		this.attempts = attempts;
 	}
 
-	public void start() {
-        isRunning.set(true);
-        executorThread = new Thread(this);
-        executorThread.start();
-    }
-    
-    public void stop() {
-        isRunning.set(false);
-    }
-    
-    public void hardStop() {
-    	stop();
-    	executorThread.interrupt();
-    }
 
     @Override
-    public void run() {
+    public void doRun() {
         while(isRunning.get()) {
             if(Thread.currentThread().isInterrupted()) {
                 return;
@@ -101,16 +75,22 @@ public class NumbersConsumer implements Runnable {
                     try {
                         result = primeCheckExecutor.submit(new PrimeCheck(futureAndNumber.getNumber(), checker));
                     } catch (RejectedExecutionException e2) {
-                        if(primeCheckExecutor.isShutdown()) {
+                    	if(primeCheckExecutor.isShutdown()) {
                             return;
                         } else {
-                        	notificationChannel.notifyError(e2);
-                        	return;
+                        	notificationChannel.notifyError(e, false);
+                        	try {
+                                Thread.sleep(delayAfterRejection);
+                            } catch (InterruptedException e1) {
+                                return;
+                            }
+                        	tasksQueue.put(futureAndNumber);
+                        	continue;
                         }
                     }
                     tasksQueue.put(new FutureAndNumber(result, futureAndNumber.getNumber(), futureAndNumber.getAttempt()+1));
             	} else {
-            		notificationChannel.notifyError(e);
+            		notificationChannel.notifyError(e, true);
                 	return;
             	}
             }
@@ -122,5 +102,4 @@ public class NumbersConsumer implements Runnable {
     		listener.numberResultReceived(numberResult);
     	}
     }
-
 }

@@ -1,85 +1,70 @@
 package primenumbers.core;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 
-public class NumbersGenerator implements Runnable {
+public class NumbersGenerator extends NumbersProducerConsumer {
     
-    private AtomicBoolean isRunning = new AtomicBoolean();
+    private long startNumber = 1;
     
-    private ExecutorService primeCheckExecutor;
-    private PriorityBlockingQueue<FutureAndNumber> tasksQueue;
-    private PrimeNumberCheckersPool primeNumberCheckersPool;
-    private NotificationChannel notificationChannel;
-    private Thread executorThread;
-    
-    private long lastNumber = 0;
-    
-    private long delay = 100;
+    private long generationDelay = 100;
 
     public NumbersGenerator(PriorityBlockingQueue<FutureAndNumber> tasksQueue,
             ExecutorService primeCheckExecutor,
             PrimeNumberCheckersPool primeNumberCheckersPool,
             NotificationChannel notificationChannel) {
-        this.tasksQueue = tasksQueue;
-        this.primeCheckExecutor = primeCheckExecutor;
-        this.primeNumberCheckersPool = primeNumberCheckersPool;
-        this.notificationChannel = notificationChannel;
+    	super(tasksQueue, primeCheckExecutor, primeNumberCheckersPool, notificationChannel);
     }
 
-    public long getDelay() {
-		return delay;
+	public long getGenerationDelay() {
+		return generationDelay;
 	}
 
-	public void setDelay(long delay) {
-		this.delay = delay;
+	public void setGenerationDelay(long generationDelay) {
+		this.generationDelay = generationDelay;
 	}
 
-    public void start(long lastNumber) {
-    	this.lastNumber = lastNumber;
-        isRunning.set(true);
-        executorThread = new Thread(this);
-        executorThread.start();
-    }
-    
-    public void stop() {
-        isRunning.set(false);
-    }
-    
-    public void hardStop() {
-    	stop();
-    	executorThread.interrupt();
+	public void start(long lastNumber, CountDownLatch terminationLatch) {
+    	this.startNumber = lastNumber+1;
+    	super.start(terminationLatch);
     }
 
     @Override
-    public void run() {
+    public void doRun() {
         while(isRunning.get() && !primeCheckExecutor.isShutdown()) {
             if(Thread.currentThread().isInterrupted()) {
                 return;
             }
-            lastNumber++;
             PrimeNumberChecker checker = primeNumberCheckersPool.getPrimeNumberChecker();
             Future<NumberResult> result;
             try {
-                result = primeCheckExecutor.submit(new PrimeCheck(lastNumber, checker));
+                result = primeCheckExecutor.submit(new PrimeCheck(startNumber, checker));
             } catch (RejectedExecutionException e) {
                 if(primeCheckExecutor.isShutdown()) {
                     return;
                 } else {
-                	notificationChannel.notifyError(e);
-                	return;
+                	notificationChannel.notifyError(e, false);
+                	try {
+                        Thread.sleep(delayAfterRejection);
+                    } catch (InterruptedException e1) {
+                        return;
+                    }
+                	continue;
                 }
             }
-            tasksQueue.put(new FutureAndNumber(result, lastNumber));
-            try {
-                Thread.sleep(delay);
-            } catch (InterruptedException e) {
-                return;
+            tasksQueue.put(new FutureAndNumber(result, startNumber));
+            if(generationDelay > 0) {
+	            try {
+	                Thread.sleep(generationDelay);
+	            } catch (InterruptedException e) {
+	                return;
+	            }
             }
+            startNumber++;
         }
     }
 }
