@@ -30,7 +30,7 @@ public class DistributedPrimeNumbersServiceTest {
 	}
 
 	@Test
-	public void test() throws InterruptedException {
+	public void test() throws InterruptedException, PrimeNumberCheckerCreationException {
 		dpns.start(0);
 		long [] limit = {10};
 		dpns.addNumberResultListener(numberResult -> {

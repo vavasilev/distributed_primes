@@ -16,7 +16,7 @@ public class PrimeNumberCheckersPool {
 		this.checkerSelectionStrategy = checkerSelectionStrategy;
 	}
 	
-	public void init() {
+	public void init() throws PrimeNumberCheckerCreationException {
 		for(int i=0; i<size; i++) {
 			primeNumberCheckers.add(primeNumberCheckerFactory.createPrimeNumberChecker());
 		}

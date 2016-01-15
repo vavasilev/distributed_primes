@@ -113,7 +113,7 @@ public class DistributedPrimeNumbersService implements NotificationChannel {
 		this.checkerSelectionStrategy = checkerSelectionStrategy;
 	}
 
-	public void start(long lastNumber) {
+	public void start(long lastNumber) throws PrimeNumberCheckerCreationException {
 		tasksQueue = new PriorityBlockingQueue<FutureAndNumber>();
 		primeCheckExecutor = new ThreadPoolExecutor(poolSize, poolSize, 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<Runnable>(queueSize));

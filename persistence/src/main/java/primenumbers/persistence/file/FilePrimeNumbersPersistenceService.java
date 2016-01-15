@@ -83,6 +83,10 @@ public class FilePrimeNumbersPersistenceService implements
 			return lastNumber;
 		}
 		try {
+			if(!Files.exists(lastNumberFile)) {
+				lastNumber = 0;
+				return lastNumber;
+			}
 			byte[] bytes = Files.readAllBytes(lastNumberFile);
 			String numberAsString = new String(bytes);
 			lastNumber = Long.parseLong(numberAsString);
@@ -95,6 +99,9 @@ public class FilePrimeNumbersPersistenceService implements
 	@Override
 	public List<Long> getPrimeNumbers() throws PersistenceException {
 		if(bufferEnd == 0 && !bufferIsFull) {
+			if(!Files.exists(primeNumbersFile)) {
+				return new ArrayList<Long>();
+			}
 			try (BufferedReader reader = Files.newBufferedReader(primeNumbersFile)) {
 				String line = null;
 			    while ((line = reader.readLine()) != null) {

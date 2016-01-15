@@ -8,7 +8,8 @@ import primenumbers.core.RandomCheckerSelectionStrategy;
 
 public class TestCmdApp {
 
-	public static void main(String[] args) throws InterruptedException, IOException {
+	public static void main(String[] args) throws InterruptedException, IOException,
+		PrimeNumberCheckerCreationException {
 		InMemoryPrimeNumbersPersistenceService persistenceService = new InMemoryPrimeNumbersPersistenceService();
       DistributedPrimeNumbersService dpns = new DistributedPrimeNumbersService();
       dpns.setPrimeNumberCheckerFactory(() -> new TestPrimeNumberChecker());

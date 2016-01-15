@@ -1,5 +1,5 @@
 package primenumbers.core;
 
 public interface PrimeNumberCheckerFactory {
-	public PrimeNumberChecker createPrimeNumberChecker();
+	public PrimeNumberChecker createPrimeNumberChecker() throws PrimeNumberCheckerCreationException;
 }
