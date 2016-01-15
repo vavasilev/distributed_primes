@@ -9,7 +9,12 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-
+/**
+ * Number consumer that notifies all registered listeners, that
+ * a number result has been processed
+ * @author vasilev
+ *
+ */
 public class NumbersConsumer extends NumbersProducerConsumer {
     private List<NumberResultListener> numberResultListeners;
     

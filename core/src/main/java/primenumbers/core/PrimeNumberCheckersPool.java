@@ -3,6 +3,11 @@ package primenumbers.core;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Pool of {@link PrimeNumberChecker} instances to be used for checking for prime numbers
+ * @author vasilev
+ *
+ */
 public class PrimeNumberCheckersPool {
 	private int size;
 	private PrimeNumberCheckerFactory primeNumberCheckerFactory;

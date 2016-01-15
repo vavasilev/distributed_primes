@@ -9,6 +9,11 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Main service for distribution of prime number detection work
+ * @author vasilev
+ *
+ */
 public class DistributedPrimeNumbersService implements NotificationChannel {
 	
 	private List<NumberResultListener> numberResultListeners = new ArrayList<>();

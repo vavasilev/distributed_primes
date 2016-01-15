@@ -6,7 +6,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 
-
+/**
+ * Generates numbers to be sent to {@link PrimeNumberChecker}
+ * @author vasilev
+ *
+ */
 public class NumbersGenerator extends NumbersProducerConsumer {
     
     private long startNumber = 1;

@@ -5,6 +5,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Base class for {@link NumbersGenerator} and {@link NumbersConsumer}
+ * @author vasilev
+ *
+ */
 public abstract class NumbersProducerConsumer implements Runnable {
 	protected PriorityBlockingQueue<FutureAndNumber> tasksQueue;
 	protected AtomicBoolean isRunning = new AtomicBoolean();
