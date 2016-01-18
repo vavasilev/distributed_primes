@@ -1,6 +1,13 @@
 package primenumbers.httpclient;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.io.IOException;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 
 import primenumbers.core.PrimeNumberChecker;
 import primenumbers.core.PrimeNumberCheckerException;
@@ -15,34 +22,20 @@ public class HttpPrimeNumberChecker implements PrimeNumberChecker {
 		this.port = port;
 	}
 
-	// Initial dummy implementation
-	private AtomicLong sleepTime = new AtomicLong(100);
-
-    public long getSleepTime() {
-		return sleepTime.get();
-	}
-
-	public void setSleepTime(long sleepTime) {
-		this.sleepTime.set(sleepTime);
-	}
-
 	@Override
     public boolean isPrime(long number) throws PrimeNumberCheckerException {
-		System.out.println("Client "+host+":"+port+" called");
-        long limit = (long)Math.sqrt(number);
-        for(long i=2; i<=limit ; i++) {
-            if(number % i == 0) {
-                return false;
-            }
-        }
-        if(sleepTime.get() > 0) {
-	        try {
-	            Thread.sleep(sleepTime.get());
-	        } catch (InterruptedException e) {
-	            // TODO Auto-generated catch block
-	            e.printStackTrace();
-	        }
-        }
-        return true;
+		CloseableHttpClient client = HttpClients.createDefault();
+		HttpGet httpGet = new HttpGet("http://"+host+":"+port+"/?number="+number);
+		
+		String result = null;
+		try(CloseableHttpResponse response = client.execute(httpGet);) {
+			HttpEntity entity = response.getEntity();
+			result = EntityUtils.toString(entity);
+			EntityUtils.consume(entity);
+		} catch (IOException e) {
+			throw new PrimeNumberCheckerException(e);
+		}
+		
+        return Boolean.parseBoolean(result);
     }
 }
